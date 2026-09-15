@@ -1,0 +1,169 @@
+{
+  "info": {
+    "name": "VietQR Integration",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "VietQR API",
+      "description": "Các API của chính VietQR — mình gọi RA để lấy token, tạo QR, và kích hoạt test callback.",
+      "item": [
+        {
+          "name": "Get Token VietQR",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "auth": {
+              "type": "basic",
+              "basic": [
+                { "key": "username", "value": "{{vietqr_username}}" },
+                { "key": "password", "value": "{{vietqr_password}}" }
+              ]
+            },
+            "url": {
+              "raw": "{{vietqr_base_url}}/token_generate",
+              "host": ["{{vietqr_base_url}}"],
+              "path": ["token_generate"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const body = pm.response.json();",
+                  "    pm.collectionVariables.set('access_token', body.access_token);",
+                  "    console.log('Saved access_token:', body.access_token);",
+                  "}",
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "API Generate QR Code",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{access_token}}" }]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"bankCode\": \"MB\",\n  \"bankAccount\": \"2501200566666\",\n  \"userBankName\": \"PHAM MINH HIEU\",\n  \"content\": \"Thanh toan don 001\",\n  \"qrType\": 0,\n  \"amount\": 50000,\n  \"orderId\": \"ORDER001\",\n  \"transType\": \"C\"\n}"
+            },
+            "url": {
+              "raw": "{{vietqr_base_url}}/qr/generate-customer",
+              "host": ["{{vietqr_base_url}}"],
+              "path": ["qr", "generate-customer"]
+            }
+          }
+        },
+        {
+          "name": "Test Callback VietQR",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{access_token}}" }]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"bankaccount\": \"2501200566666\",\n  \"amount\": 50000,\n  \"transType\": \"C\",\n  \"content\": \"Test callback tu VietQR\",\n  \"transactionid\": \"TEST123456\",\n  \"transactiontime\": 1789480000000,\n  \"referencenumber\": \"REF123456\",\n  \"orderId\": \"ORDER001\"\n}"
+            },
+            "url": {
+              "raw": "https://dev.vietqr.org/vqr/bank/api/test/transaction-callback",
+              "protocol": "https",
+              "host": ["dev", "vietqr", "org"],
+              "path": ["vqr", "bank", "api", "test", "transaction-callback"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "API KH (đầu nhận của mình)",
+      "description": "Test trực tiếp 2 API mà chính hệ thống mình xây, để tự kiểm tra trước khi nhờ VietQR gọi thật.",
+      "item": [
+        {
+          "name": "API get token KH",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "auth": {
+              "type": "basic",
+              "basic": [
+                { "key": "username", "value": "{{kh_username}}" },
+                { "key": "password", "value": "{{kh_password}}" }
+              ]
+            },
+            "url": {
+              "raw": "{{kh_base_url}}/api/token_generate",
+              "host": ["{{kh_base_url}}"],
+              "path": ["api", "token_generate"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const body = pm.response.json();",
+                  "    pm.collectionVariables.set('kh_access_token', body.access_token);",
+                  "    console.log('Saved kh_access_token:', body.access_token);",
+                  "}",
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "API transaction-sync KH",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{kh_access_token}}" }]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"bankaccount\": \"2501200566666\",\n  \"amount\": 50000,\n  \"transType\": \"C\",\n  \"content\": \"Test tu tay\",\n  \"transactionid\": \"LOCALTEST001\",\n  \"transactiontime\": 1789480000000,\n  \"referencenumber\": \"REFLOCAL001\",\n  \"orderId\": \"ORDER001\"\n}"
+            },
+            "url": {
+              "raw": "{{kh_base_url}}/bank/api/transaction-sync",
+              "host": ["{{kh_base_url}}"],
+              "path": ["bank", "api", "transaction-sync"]
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    { "key": "vietqr_base_url", "value": "https://dev.vietqr.org/vqr/api" },
+    { "key": "vietqr_username", "value": "customer-phmminhhiu-user26685" },
+    { "key": "vietqr_password", "value": "DIEN_PASSWORD_THAT_VIETQR_CAP" },
+    { "key": "access_token", "value": "" },
+    { "key": "kh_base_url", "value": "https://testvieqr.onrender.com" },
+    { "key": "kh_username", "value": "PHMMINHHIU" },
+    { "key": "kh_password", "value": "Hh123123" },
+    { "key": "kh_access_token", "value": "" }
+  ]
+}

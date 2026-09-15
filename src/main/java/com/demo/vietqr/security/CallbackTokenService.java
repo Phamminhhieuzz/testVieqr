@@ -34,7 +34,7 @@ public class CallbackTokenService {
                 .subject(subject)
                 .issuedAt(new Date())
                 .expiration(new Date(System.currentTimeMillis() + expirationSeconds * 1000))
-                .signWith(getKey())
+                .signWith(getKey(), Jwts.SIG.HS256)
                 .compact();
     }
 

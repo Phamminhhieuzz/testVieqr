@@ -30,7 +30,7 @@ public class JwtUtil {
                 .subject(username)
                 .issuedAt(new Date())
                 .expiration(new Date(System.currentTimeMillis() + expirationMs))
-                .signWith(getKey())
+                .signWith(getKey(), Jwts.SIG.HS256)
                 .compact();
     }
 
