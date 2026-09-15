@@ -1,0 +1,27 @@
+server:
+  port: ${PORT:8080}
+
+vietqr:
+  username: ${VIETQR_USERNAME:customer-phmminhhiu-user26685}
+  password: ${VIETQR_PASSWORD:Y3VzdG9tZXItcGhtbWluaGhpdS11c2VyMjY2ODU=}
+  base-url: ${VIETQR_BASE_URL:https://dev.vietqr.org/vqr/api}
+
+# Tài khoản admin đăng nhập vào API
+admin:
+  username: ${ADMIN_USERNAME:admin}
+  password: ${ADMIN_PASSWORD:Admin@123}
+
+# JWT
+jwt:
+  secret: ${JWT_SECRET:vietqr-demo-super-secret-key-32-chars-min-required-2024}
+  expiration-ms: 86400000
+  # VietQR Callback — username/password app TỰ ĐỊNH NGHĨA, báo cho VietQR biết
+vietqr-callback:
+  username: ${VIETQR_CALLBACK_USERNAME:vqr-callback-user}
+  password: ${VIETQR_CALLBACK_PASSWORD:vqr-callback-Pass@123}
+  secret: ${VIETQR_CALLBACK_SECRET:vietqr-callback-token-secret-key-32-chars-minimum-2024}
+  expiration-seconds: 300
+
+logging:
+  level:
+    com.demo.vietqr: DEBUG

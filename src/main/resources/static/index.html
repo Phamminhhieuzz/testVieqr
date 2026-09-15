@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>VietQR Demo</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', sans-serif; background: #f0f4f8; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
+    .card { background: white; border-radius: 16px; padding: 32px; width: 100%; max-width: 480px; box-shadow: 0 4px 24px rgba(0,0,0,0.08); }
+    h1 { font-size: 22px; font-weight: 700; color: #1a1a2e; margin-bottom: 4px; }
+    .subtitle { color: #6b7280; font-size: 14px; margin-bottom: 28px; }
+    .section { background: #f8fafc; border-radius: 10px; padding: 20px; margin-bottom: 20px; }
+    .section-title { font-size: 13px; font-weight: 600; color: #374151; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 14px; }
+    label { display: block; font-size: 13px; color: #4b5563; margin-bottom: 5px; }
+    input { width: 100%; padding: 10px 14px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 14px; outline: none; transition: border 0.2s; }
+    input:focus { border-color: #4f46e5; }
+    .row { display: flex; gap: 12px; margin-bottom: 12px; }
+    .row .field { flex: 1; }
+    .field { margin-bottom: 12px; }
+    .btn { width: 100%; padding: 12px; border: none; border-radius: 10px; font-size: 15px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+    .btn-login { background: #4f46e5; color: white; }
+    .btn-login:hover { background: #4338ca; }
+    .btn-qr { background: #0ea5e9; color: white; }
+    .btn-qr:hover { background: #0284c7; }
+    .btn:disabled { opacity: 0.6; cursor: not-allowed; }
+    .alert { padding: 10px 14px; border-radius: 8px; font-size: 13px; margin-bottom: 12px; }
+    .alert-error { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
+    .alert-success { background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; }
+    .qr-area { text-align: center; padding: 24px 0; }
+    #qrcode { display: inline-block; margin-bottom: 16px; }
+    #qrcode canvas { border-radius: 8px; border: 1px solid #e5e7eb; }
+    .qr-info { background: #f8fafc; border-radius: 10px; padding: 14px 16px; text-align: left; font-size: 13px; }
+    .qr-info div { display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid #f1f5f9; }
+    .qr-info div:last-child { border: none; }
+    .qr-info .label { color: #6b7280; }
+    .qr-info .value { font-weight: 600; color: #1f2937; }
+    .qr-link { display: block; margin-top: 12px; text-align: center; color: #4f46e5; font-size: 13px; text-decoration: none; }
+    .qr-link:hover { text-decoration: underline; }
+    .tag { display: inline-block; background: #e0f2fe; color: #0369a1; font-size: 11px; padding: 2px 8px; border-radius: 20px; margin-left: 8px; }
+    #loginSection { }
+    #qrSection { display: none; }
+    .amount-input { font-size: 18px; font-weight: 600; }
+  </style>
+</head>
+<body>
+<div class="card">
+  <h1>VietQR Demo <span class="tag">TEST</span></h1>
+  <p class="subtitle">Tạo mã QR thanh toán ngân hàng</p>
+
+  <!-- LOGIN -->
+  <div id="loginSection">
+    <div class="section">
+      <div class="section-title">Đăng nhập Admin</div>
+      <div id="loginAlert"></div>
+      <div class="field">
+        <label>Username</label>
+        <input id="username" type="text" placeholder="admin" value="admin" />
+      </div>
+      <div class="field">
+        <label>Password</label>
+        <input id="password" type="password" placeholder="••••••••" />
+      </div>
+      <button class="btn btn-login" onclick="login()">Đăng nhập</button>
+    </div>
+  </div>
+
+  <!-- QR FORM -->
+  <div id="qrSection">
+    <div class="section">
+      <div class="section-title">Thông tin thanh toán</div>
+      <div id="qrAlert"></div>
+      <div class="field">
+        <label>Số tiền (VND)</label>
+        <input id="amount" class="amount-input" type="number" placeholder="50000" value="50000" />
+      </div>
+      <div class="row">
+        <div class="field">
+          <label>Mã đơn hàng</label>
+          <input id="orderId" type="text" placeholder="ORDER001" value="ORDER001" maxlength="13" />
+        </div>
+        <div class="field">
+          <label>Nội dung</label>
+          <input id="content" type="text" placeholder="Thanh toan" value="Thanh toan don" maxlength="23" />
+        </div>
+      </div>
+      <button class="btn btn-qr" onclick="generateQr()">🔲 Tạo mã QR</button>
+    </div>
+
+    <div id="qrResult" style="display:none">
+      <div class="qr-area">
+        <div id="qrcode"></div>
+        <div class="qr-info" id="qrInfo"></div>
+        <a id="qrLink" class="qr-link" target="_blank">🔗 Mở trang thanh toán VietQR</a>
+      </div>
+    </div>
+
+    <button class="btn" style="background:#f1f5f9;color:#374151;margin-top:8px" onclick="logout()">Đăng xuất</button>
+  </div>
+</div>
+
+<script src="/qrcode.min.js"></script>
+<script>
+  let jwtToken = null;
+  const BASE = window.location.origin;
+
+  async function login() {
+    const username = document.getElementById('username').value.trim();
+    const password = document.getElementById('password').value.trim();
+    const alertEl = document.getElementById('loginAlert');
+    alertEl.innerHTML = '';
+
+    try {
+      const res = await fetch(`${BASE}/api/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password })
+      });
+      const data = await res.json();
+
+      if (res.ok && data.token) {
+        jwtToken = data.token;
+        document.getElementById('loginSection').style.display = 'none';
+        document.getElementById('qrSection').style.display = 'block';
+      } else {
+        alertEl.innerHTML = `<div class="alert alert-error">${data.message || 'Đăng nhập thất bại'}</div>`;
+      }
+    } catch (e) {
+      alertEl.innerHTML = `<div class="alert alert-error">Không kết nối được server</div>`;
+    }
+  }
+
+  async function generateQr() {
+    const amount = parseInt(document.getElementById('amount').value);
+    const orderId = document.getElementById('orderId').value.trim();
+    const content = document.getElementById('content').value.trim();
+    const alertEl = document.getElementById('qrAlert');
+    alertEl.innerHTML = '';
+
+    if (!amount || amount <= 0) { alertEl.innerHTML = '<div class="alert alert-error">Nhập số tiền hợp lệ</div>'; return; }
+    if (!orderId) { alertEl.innerHTML = '<div class="alert alert-error">Nhập mã đơn hàng</div>'; return; }
+
+    try {
+      const res = await fetch(`${BASE}/api/qr/generate`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${jwtToken}`
+        },
+        body: JSON.stringify({
+          bankCode: 'MB',
+          bankAccount: '2501200566666',
+          userBankName: 'PHAM MINH HIEU',
+          content: content,
+          qrType: 0,
+          amount: amount,
+          orderId: orderId,
+          transType: 'C'
+        })
+      });
+
+      const data = await res.json();
+      if (res.ok && data.qrCode) {
+        renderQr(data, amount);
+      } else {
+        alertEl.innerHTML = `<div class="alert alert-error">${data.message || 'Tạo QR thất bại'}</div>`;
+      }
+    } catch (e) {
+      alertEl.innerHTML = `<div class="alert alert-error">Lỗi kết nối: ${e.message}</div>`;
+    }
+  }
+
+  function renderQr(data, amount) {
+    const container = document.getElementById('qrcode');
+    container.innerHTML = '';
+    new QRCode(container, { text: data.qrCode, width: 220, height: 220, colorDark: '#1a1a2e', colorLight: '#ffffff' });
+
+    document.getElementById('qrInfo').innerHTML = `
+      <div><span class="label">Tài khoản</span><span class="value">MB - ${data.bankAccount}</span></div>
+      <div><span class="label">Chủ TK</span><span class="value">${data.userBankName}</span></div>
+      <div><span class="label">Số tiền</span><span class="value">${amount.toLocaleString('vi-VN')} VND</span></div>
+      <div><span class="label">Mã đơn hàng</span><span class="value">${data.orderId}</span></div>
+      <div><span class="label">Nội dung</span><span class="value">${data.content}</span></div>
+    `;
+
+    const link = document.getElementById('qrLink');
+    link.href = data.qrLink;
+
+    document.getElementById('qrResult').style.display = 'block';
+  }
+
+  function logout() {
+    jwtToken = null;
+    document.getElementById('qrSection').style.display = 'none';
+    document.getElementById('loginSection').style.display = 'block';
+    document.getElementById('qrResult').style.display = 'none';
+    document.getElementById('password').value = '';
+  }
+
+  // Enter để login
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Enter') {
+      if (document.getElementById('loginSection').style.display !== 'none') login();
+    }
+  });
+</script>
+</body>
+</html>
