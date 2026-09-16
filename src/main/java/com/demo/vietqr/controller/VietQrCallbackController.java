@@ -28,7 +28,7 @@ public class VietQrCallbackController {
     @Value("${vietqr-callback.password}")
     private String callbackPassword;
 
-    @PostMapping({"/api/token_generate", "/vqr/api/token_generate"})
+    @PostMapping("/api/token_generate")
     public ResponseEntity<?> generateTokenForVietQR(
             @RequestHeader(value = "Authorization", required = false) String authorization) {
 
@@ -80,7 +80,7 @@ public class VietQrCallbackController {
         ));
     }
 
-    @PostMapping({"/bank/api/transaction-sync", "/vqr/bank/api/transaction-sync"})
+    @PostMapping("/bank/api/transaction-sync")
     public ResponseEntity<?> receiveTransactionSync(
             @RequestHeader(value = "Authorization", required = false) String authorization,
             @RequestBody TransactionSyncPayload payload) {
