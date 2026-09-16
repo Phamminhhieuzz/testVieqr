@@ -724,6 +724,7 @@
         jwtToken = data.token;
         document.getElementById('loginSection').style.display = 'none';
         document.getElementById('qrSection').style.display = 'block';
+        document.getElementById('orderId').value = 'ORD' + Math.floor(1000 + Math.random() * 9000);
       } else {
         alertEl.innerHTML = `<div class="alert alert-error">${data.message || 'Đăng nhập thất bại'}</div>`;
       }

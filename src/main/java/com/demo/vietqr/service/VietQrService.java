@@ -93,9 +93,13 @@ public class VietQrService {
             order.setAmount(request.getAmount());
             order.setContent(response.getContent());
             order.setQrCode(response.getQrCode());
+            order.setStatus(QrOrder.Status.PENDING);
+            order.setRefTransactionId(null);
+            order.setPaidAmount(null);
+            order.setPaidAt(null);
             qrOrderRepository.save(order);
 
-            log.info("Đã lưu đơn {} — mã VQR {}", orderId, order.getVqrCode());
+            log.info("Đã lưu đơn {} — mã VQR {}, trạng thái PENDING", orderId, order.getVqrCode());
         } catch (Exception e) {
             log.error("Không lưu được đơn {}: {}", orderId, e.getMessage());
         }
