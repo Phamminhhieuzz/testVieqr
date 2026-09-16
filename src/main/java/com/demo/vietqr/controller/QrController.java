@@ -2,6 +2,7 @@ package com.demo.vietqr.controller;
 
 import com.demo.vietqr.dto.GenerateQrRequest;
 import com.demo.vietqr.dto.GenerateQrResponse;
+import com.demo.vietqr.repository.QrOrderRepository;
 import com.demo.vietqr.service.VietQrService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -18,6 +19,7 @@ import java.util.Map;
 public class QrController {
 
     private final VietQrService vietQrService;
+    private final QrOrderRepository qrOrderRepository;
 
     /**
      * Tạo mã QR thanh toán VietQR.
@@ -54,6 +56,29 @@ public class QrController {
                     "message", e.getMessage()
             ));
         }
+    }
+
+    /**
+     * Tra cứu đơn đã thanh toán chưa.
+     * GET /api/qr/order/{orderId}
+     */
+    @GetMapping("/order/{orderId}")
+    public ResponseEntity<?> getOrder(@PathVariable String orderId) {
+        return qrOrderRepository.findByOrderId(orderId)
+                .<ResponseEntity<?>>map(order -> ResponseEntity.ok(Map.of(
+                        "orderId", order.getOrderId(),
+                        "vqrCode", order.getVqrCode() == null ? "" : order.getVqrCode(),
+                        "amount", order.getAmount(),
+                        "status", order.getStatus().name(),
+                        "paidAmount", order.getPaidAmount() == null ? 0 : order.getPaidAmount(),
+                        "refTransactionId", order.getRefTransactionId() == null ? "" : order.getRefTransactionId(),
+                        "createdAt", String.valueOf(order.getCreatedAt()),
+                        "paidAt", String.valueOf(order.getPaidAt())
+                )))
+                .orElseGet(() -> ResponseEntity.status(404).body(Map.of(
+                        "status", "NOT_FOUND",
+                        "message", "Không tìm thấy đơn " + orderId
+                )));
     }
 
     /**

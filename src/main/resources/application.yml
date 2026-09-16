@@ -1,6 +1,22 @@
 server:
   port: ${PORT:8080}
 
+spring:
+  datasource:
+    url: ${DB_URL:jdbc:mysql://localhost:3306/vietqr_demo?useSSL=false&connectionTimeZone=UTC&forceConnectionTimeZoneToSession=true}
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD:123456}
+  jpa:
+    hibernate:
+      # Chi kiem tra cau truc bang, khong tu sua. File db/vietqr_schema.sql la nguon chuan duy nhat.
+      ddl-auto: validate
+    open-in-view: false
+    properties:
+      hibernate:
+        # Moc thoi gian luu va doc deu theo UTC, tranh lech gio giua may local (+07) va Aiven (UTC)
+        jdbc:
+          time_zone: UTC
+
 vietqr:
   username: ${VIETQR_USERNAME:customer-phmminhhiu-user26685}
   password: ${VIETQR_PASSWORD:Y3VzdG9tZXItcGhtbWluaGhpdS11c2VyMjY2ODU=}

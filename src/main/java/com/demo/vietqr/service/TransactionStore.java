@@ -1,93 +1,99 @@
 package com.demo.vietqr.service;
 
 import com.demo.vietqr.dto.TransactionSyncPayload;
-import lombok.Getter;
-import org.springframework.stereotype.Component;
+import com.demo.vietqr.entity.QrOrder;
+import com.demo.vietqr.entity.TransactionSyncEntity;
+import com.demo.vietqr.repository.QrOrderRepository;
+import com.demo.vietqr.repository.TransactionSyncRepository;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 /**
- * Kho giao dịch nhận từ VietQR, lưu trong bộ nhớ.
- * Khoá theo transactionid của VietQR để chống xử lý trùng khi họ gọi lại.
+ * Lưu giao dịch nhận từ VietQR vào database và đối chiếu với đơn hàng.
+ * Ràng buộc UNIQUE trên transactionid ở tầng DB là lớp chống trùng cuối cùng.
  */
-@Component
+@Slf4j
+@Service
+@RequiredArgsConstructor
 public class TransactionStore {
 
-    private static final int MAX_TRANSACTIONS = 500;
+    private final TransactionSyncRepository transactionRepository;
+    private final QrOrderRepository qrOrderRepository;
 
-    /** Mã đơn VietQR nhúng trong nội dung chuyển khoản, ví dụ "VQR471bacff47 Thanh toan don 001". */
-    private static final Pattern VQR_CODE = Pattern.compile("\\bVQR[A-Za-z0-9]+\\b");
-
-    private final Map<String, StoredTransaction> byTransactionId =
-            new LinkedHashMap<>(16, 0.75f, false) {
-                @Override
-                protected boolean removeEldestEntry(Map.Entry<String, StoredTransaction> eldest) {
-                    return size() > MAX_TRANSACTIONS;
-                }
-            };
-
-    public synchronized Optional<StoredTransaction> findByTransactionId(String transactionId) {
-        return Optional.ofNullable(byTransactionId.get(transactionId));
+    @Transactional(readOnly = true)
+    public Optional<TransactionSyncEntity> findByTransactionId(String transactionId) {
+        return transactionRepository.findByTransactionid(transactionId);
     }
 
-    public synchronized StoredTransaction save(TransactionSyncPayload payload) {
-        StoredTransaction stored = new StoredTransaction(
-                UUID.randomUUID().toString(),
-                payload,
-                extractVqrCode(payload.getContent()),
-                Instant.now().toString()
-        );
-        byTransactionId.put(payload.getTransactionid(), stored);
-        return stored;
+    @Transactional
+    public TransactionSyncEntity save(TransactionSyncPayload payload) {
+        TransactionSyncEntity entity = new TransactionSyncEntity();
+        entity.setReftransactionid(UUID.randomUUID().toString());
+        entity.setTransactionid(payload.getTransactionid());
+        entity.setBankaccount(payload.getBankaccount());
+        entity.setAmount(payload.getAmount());
+        entity.setTransType(payload.getTransType().toUpperCase());
+        entity.setContent(payload.getContent());
+        entity.setVqrCode(VqrCodeExtractor.extract(payload.getContent()));
+        entity.setReferencenumber(payload.getReferencenumber());
+        entity.setOrderId(payload.getOrderId());
+        entity.setTransactionTime(payload.getTransactiontime());
+        entity.setTerminalCode(payload.getTerminalCode());
+        entity.setSubTerminalCode(payload.getSubTerminalCode());
+        entity.setServiceCode(payload.getServiceCode());
+        entity.setUrlLink(payload.getUrlLink());
+        entity.setSign(payload.getSign());
+
+        TransactionSyncEntity saved = transactionRepository.save(entity);
+        matchOrder(saved);
+        return saved;
     }
 
-    public synchronized List<StoredTransaction> findAll() {
-        return new ArrayList<>(byTransactionId.values());
+    @Transactional(readOnly = true)
+    public List<TransactionSyncEntity> findAll() {
+        return transactionRepository.findTop50ByOrderByIdDesc();
     }
 
-    private String extractVqrCode(String content) {
-        if (content == null) {
-            return null;
+    /**
+     * Đối chiếu giao dịch với đơn hàng qua mã VQR, chỉ áp dụng cho giao dịch ghi có.
+     * Không tìm thấy đơn là chuyện bình thường (khách chuyển tiền ngoài luồng tạo QR).
+     */
+    private void matchOrder(TransactionSyncEntity transaction) {
+        if (!"C".equalsIgnoreCase(transaction.getTransType()) || transaction.getVqrCode() == null) {
+            return;
         }
-        Matcher matcher = VQR_CODE.matcher(content);
-        return matcher.find() ? matcher.group() : null;
-    }
 
-    @Getter
-    public static class StoredTransaction {
-        private final String reftransactionid;
-        private final String transactionid;
-        private final String bankaccount;
-        private final Long amount;
-        private final String transType;
-        private final String content;
-        private final String vqrCode;
-        private final String referencenumber;
-        private final String orderId;
-        private final Long transactiontime;
-        private final String receivedAt;
-
-        StoredTransaction(String reftransactionid, TransactionSyncPayload p,
-                          String vqrCode, String receivedAt) {
-            this.reftransactionid = reftransactionid;
-            this.transactionid = p.getTransactionid();
-            this.bankaccount = p.getBankaccount();
-            this.amount = p.getAmount();
-            this.transType = p.getTransType();
-            this.content = p.getContent();
-            this.vqrCode = vqrCode;
-            this.referencenumber = p.getReferencenumber();
-            this.orderId = p.getOrderId();
-            this.transactiontime = p.getTransactiontime();
-            this.receivedAt = receivedAt;
+        Optional<QrOrder> found = qrOrderRepository.findByVqrCode(transaction.getVqrCode());
+        if (found.isEmpty()) {
+            log.info("Không tìm thấy đơn khớp mã VQR {} — giao dịch vẫn được lưu lại",
+                    transaction.getVqrCode());
+            return;
         }
+
+        QrOrder order = found.get();
+        if (order.getStatus() == QrOrder.Status.PAID) {
+            log.info("Đơn {} đã thanh toán trước đó, bỏ qua", order.getOrderId());
+            return;
+        }
+
+        order.setStatus(QrOrder.Status.PAID);
+        order.setRefTransactionId(transaction.getReftransactionid());
+        order.setPaidAmount(transaction.getAmount());
+        order.setPaidAt(Instant.now());
+        qrOrderRepository.save(order);
+
+        if (!order.getAmount().equals(transaction.getAmount())) {
+            log.warn("⚠️ Đơn {} lệch tiền: cần thu {} nhưng nhận {}",
+                    order.getOrderId(), order.getAmount(), transaction.getAmount());
+        }
+        log.info("✅ Đơn {} đã thanh toán — {} VND, mã VQR {}",
+                order.getOrderId(), transaction.getAmount(), transaction.getVqrCode());
     }
 }

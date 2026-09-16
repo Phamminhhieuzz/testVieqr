@@ -2,6 +2,8 @@ package com.demo.vietqr.service;
 
 import com.demo.vietqr.dto.GenerateQrRequest;
 import com.demo.vietqr.dto.GenerateQrResponse;
+import com.demo.vietqr.entity.QrOrder;
+import com.demo.vietqr.repository.QrOrderRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -20,6 +22,7 @@ public class VietQrService {
 
     private final RestTemplate restTemplate;
     private final VietQrTokenService tokenService;
+    private final QrOrderRepository qrOrderRepository;
 
     @Value("${vietqr.base-url}")
     private String baseUrl;
@@ -51,6 +54,8 @@ public class VietQrService {
                 throw new IllegalStateException("VietQR trả về response rỗng");
             }
 
+            saveOrder(qrRequest, body);
+
             log.info("Tạo QR thành công — orderId={}, transactionRefId={}",
                     body.getOrderId(), body.getTransactionRefId());
             return body;
@@ -61,6 +66,38 @@ public class VietQrService {
         } catch (Exception e) {
             log.error("Lỗi khi gọi VietQR generate QR: {}", e.getMessage());
             throw new RuntimeException("Gọi VietQR thất bại: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Ghi lại đơn hàng để sau này đối chiếu với giao dịch nhận từ callback.
+     * Lỗi lưu đơn không được làm hỏng việc trả mã QR cho khách.
+     */
+    private void saveOrder(GenerateQrRequest request, GenerateQrResponse response) {
+        String orderId = response.getOrderId() != null && !response.getOrderId().isBlank()
+                ? response.getOrderId()
+                : request.getOrderId();
+        if (orderId == null || orderId.isBlank()) {
+            log.warn("QR tạo ra không có orderId — bỏ qua việc lưu đơn");
+            return;
+        }
+
+        try {
+            QrOrder order = qrOrderRepository.findByOrderId(orderId).orElseGet(QrOrder::new);
+            order.setOrderId(orderId);
+            order.setVqrCode(VqrCodeExtractor.extract(response.getContent()));
+            order.setBankAccount(response.getBankAccount() != null
+                    ? response.getBankAccount() : request.getBankAccount());
+            order.setBankCode(response.getBankCode() != null
+                    ? response.getBankCode() : request.getBankCode());
+            order.setAmount(request.getAmount());
+            order.setContent(response.getContent());
+            order.setQrCode(response.getQrCode());
+            qrOrderRepository.save(order);
+
+            log.info("Đã lưu đơn {} — mã VQR {}", orderId, order.getVqrCode());
+        } catch (Exception e) {
+            log.error("Không lưu được đơn {}: {}", orderId, e.getMessage());
         }
     }
 
