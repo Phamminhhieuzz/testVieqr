@@ -66,14 +66,37 @@ public class TransactionStore {
      * Không tìm thấy đơn là chuyện bình thường (khách chuyển tiền ngoài luồng tạo QR).
      */
     private void matchOrder(TransactionSyncEntity transaction) {
-        if (!"C".equalsIgnoreCase(transaction.getTransType()) || transaction.getVqrCode() == null) {
+        if (!"C".equalsIgnoreCase(transaction.getTransType())) {
             return;
         }
 
-        Optional<QrOrder> found = qrOrderRepository.findByVqrCode(transaction.getVqrCode());
+        Optional<QrOrder> found = Optional.empty();
+
+        // 1. Khớp qua mã VQR (chuẩn VietQR)
+        if (transaction.getVqrCode() != null && !transaction.getVqrCode().isBlank()) {
+            found = qrOrderRepository.findByVqrCode(transaction.getVqrCode());
+        }
+
+        // 2. Khớp qua order_id nếu có
+        if (found.isEmpty() && transaction.getOrderId() != null && !transaction.getOrderId().isBlank()) {
+            found = qrOrderRepository.findByOrderId(transaction.getOrderId());
+        }
+
+        // 3. Khớp qua nội dung chuyển khoản chứa mã đơn hàng
+        if (found.isEmpty() && transaction.getContent() != null) {
+            String contentUpper = transaction.getContent().toUpperCase();
+            List<QrOrder> pendingOrders = qrOrderRepository.findByStatus(QrOrder.Status.PENDING);
+            for (QrOrder pending : pendingOrders) {
+                if (pending.getOrderId() != null && contentUpper.contains(pending.getOrderId().toUpperCase())) {
+                    found = Optional.of(pending);
+                    break;
+                }
+            }
+        }
+
         if (found.isEmpty()) {
-            log.info("Không tìm thấy đơn khớp mã VQR {} — giao dịch vẫn được lưu lại",
-                    transaction.getVqrCode());
+            log.info("Không tìm thấy đơn khớp giao dịch {} (content='{}', vqr='{}') — giao dịch vẫn được lưu lại",
+                    transaction.getTransactionid(), transaction.getContent(), transaction.getVqrCode());
             return;
         }
 

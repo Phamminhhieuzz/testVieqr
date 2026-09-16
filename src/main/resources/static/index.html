@@ -536,9 +536,9 @@
           <div class="card-bank-name">MBBANK</div>
           <div class="chip"></div>
         </div>
-        <div class="card-number">0091 5858 477</div>
+        <div class="card-number">2501 2005 66666</div>
         <div class="card-bottom">
-          <div class="card-holder">LE HO ANH</div>
+          <div class="card-holder">PHAM MINH HIEU</div>
           <div class="card-type">NAPAS 247</div>
         </div>
       </div>
@@ -611,13 +611,13 @@
             <div class="bill-row">
               <span class="bill-label">Số tài khoản</span>
               <span class="bill-value">
-                <span id="txtAccount">00915858477</span>
-                <button class="copy-btn" onclick="copyText('00915858477')">Copy</button>
+                <span id="txtAccount">2501200566666</span>
+                <button class="copy-btn" onclick="copyText('2501200566666')">Copy</button>
               </span>
             </div>
             <div class="bill-row">
               <span class="bill-label">Người nhận</span>
-              <span class="bill-value" id="txtOwner">LE HO ANH</span>
+              <span class="bill-value" id="txtOwner">PHAM MINH HIEU</span>
             </div>
             <div class="bill-row">
               <span class="bill-label">Số tiền</span>
@@ -631,11 +631,6 @@
               </span>
             </div>
           </div>
-
-          <!-- Fast Simulate Pay Button -->
-          <button class="btn btn-simulate" id="btnSimulate" onclick="simulatePayment()">
-            ⚡ Giả lập thanh toán ngay (Test callback)
-          </button>
         </div>
 
         <button class="btn btn-outline" onclick="resetNewOrder()">
@@ -762,8 +757,8 @@
         },
         body: JSON.stringify({
           bankCode: 'MB',
-          bankAccount: '00915858477',
-          userBankName: 'Le Ho Anh',
+          bankAccount: '2501200566666',
+          userBankName: 'PHAM MINH HIEU',
           content: content,
           qrType: 0,
           amount: amount,
@@ -856,24 +851,6 @@
       `Mã đơn: <strong>${data.orderId}</strong><br>` +
       `Mã tham chiếu: <span style="word-break:break-all">${data.refTransactionId}</span><br>` +
       `Thời gian: ${new Date().toLocaleTimeString('vi-VN')} ${new Date().toLocaleDateString('vi-VN')}`;
-  }
-
-  async function simulatePayment() {
-    if (!currentOrderId) return;
-    const btn = document.getElementById('btnSimulate');
-    btn.disabled = true;
-    btn.innerText = '⚡ Đang gửi tín hiệu tiền về...';
-
-    try {
-      await fetch(`${BASE}/api/qr/order/${currentOrderId}/simulate-pay`, {
-        method: 'POST'
-      });
-    } catch (e) {
-      alert('Lỗi: ' + e.message);
-    } finally {
-      btn.disabled = false;
-      btn.innerText = '⚡ Giả lập thanh toán ngay (Test callback)';
-    }
   }
 
   function resetNewOrder() {

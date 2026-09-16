@@ -109,7 +109,7 @@ public class QrController {
 
         TransactionSyncPayload payload = new TransactionSyncPayload();
         payload.setTransactionid("SIM-" + System.currentTimeMillis());
-        payload.setBankaccount(order.getBankAccount() != null ? order.getBankAccount() : "00915858477");
+        payload.setBankaccount(order.getBankAccount() != null ? order.getBankAccount() : "2501200566666");
         payload.setAmount(order.getAmount());
         payload.setTransType("C");
         payload.setContent(order.getContent() != null ? order.getContent() : (order.getVqrCode() + " Thanh toan don"));
