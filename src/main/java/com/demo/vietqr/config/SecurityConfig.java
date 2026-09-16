@@ -34,6 +34,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/auth/**").permitAll()
                 .requestMatchers("/api/qr/health").permitAll()
                 .requestMatchers("/api/webhook/**").permitAll()
+                .requestMatchers("/api/debug/**").permitAll()
                 .requestMatchers("/api/token_generate", "/vqr/api/token_generate").permitAll()
                 .requestMatchers("/bank/api/transaction-sync", "/vqr/bank/api/transaction-sync").permitAll()
                 .requestMatchers("/", "/index.html", "/**.css", "/**.js").permitAll()
