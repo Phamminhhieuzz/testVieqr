@@ -3,138 +3,474 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>VietQR Payment Demo</title>
+  <title>VietQR Pro — Cổng Thanh Toán Tự Động</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <!-- Canvas Confetti for Celebration -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
   <style>
+    :root {
+      --primary: #2563eb;
+      --primary-dark: #1d4ed8;
+      --primary-glow: rgba(37, 99, 235, 0.35);
+      --accent: #06b6d4;
+      --success: #10b981;
+      --success-glow: rgba(16, 185, 129, 0.4);
+      --bg: #090d16;
+      --card-bg: rgba(18, 24, 38, 0.85);
+      --card-border: rgba(255, 255, 255, 0.08);
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+    }
+
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
       font-family: 'Plus Jakarta Sans', -apple-system, sans-serif;
-      background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+      background: radial-gradient(circle at 50% 0%, #1e1b4b 0%, #090d16 65%);
       min-height: 100vh;
       display: flex;
       align-items: center;
       justify-content: center;
-      padding: 24px;
-      color: #1e293b;
+      padding: 20px;
+      color: var(--text);
+      overflow-x: hidden;
     }
-    .card {
-      background: #ffffff;
-      border-radius: 20px;
-      padding: 32px;
+
+    /* Ambient Background Glow */
+    .glow-orb {
+      position: fixed;
+      width: 400px;
+      height: 400px;
+      background: radial-gradient(circle, rgba(37, 99, 235, 0.25) 0%, transparent 70%);
+      top: -100px;
+      left: 50%;
+      transform: translateX(-50%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .app-container {
+      position: relative;
+      z-index: 1;
       width: 100%;
-      max-width: 480px;
-      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+      max-width: 460px;
     }
+
+    .card {
+      background: var(--card-bg);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid var(--card-border);
+      border-radius: 24px;
+      padding: 32px 28px;
+      box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.05);
+      transition: all 0.3s ease;
+    }
+
+    /* Header */
     .header {
       display: flex;
       align-items: center;
       justify-content: space-between;
       margin-bottom: 24px;
     }
-    h1 {
-      font-size: 22px;
-      font-weight: 700;
-      color: #0f172a;
+    .brand {
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 10px;
     }
-    .tag {
-      background: #e0e7ff;
-      color: #4338ca;
+    .brand-logo {
+      width: 38px;
+      height: 38px;
+      background: linear-gradient(135deg, #0284c7, #4f46e5);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      box-shadow: 0 8px 16px -4px var(--primary-glow);
+    }
+    .brand h1 {
+      font-size: 20px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      background: linear-gradient(to right, #ffffff, #93c5fd);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .live-badge {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(16, 185, 129, 0.12);
+      border: 1px solid rgba(16, 185, 129, 0.25);
+      color: #34d399;
       font-size: 11px;
       font-weight: 700;
-      padding: 3px 8px;
+      padding: 4px 10px;
       border-radius: 999px;
-      text-transform: uppercase;
     }
-    .subtitle {
-      color: #64748b;
-      font-size: 14px;
-      margin-top: 4px;
+    .live-dot {
+      width: 6px;
+      height: 6px;
+      background: #10b981;
+      border-radius: 50%;
+      box-shadow: 0 0 8px #10b981;
+      animation: pulse 1.5s infinite;
     }
-    .section {
-      background: #f8fafc;
-      border-radius: 14px;
-      padding: 20px;
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(1.3); }
+    }
+
+    /* Bank Card Visual */
+    .bank-card {
+      background: linear-gradient(135deg, #1e3a8a 0%, #0f172a 100%);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 18px;
+      padding: 20px 22px;
+      margin-bottom: 24px;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 12px 28px -8px rgba(30, 58, 138, 0.4);
+    }
+    .bank-card::after {
+      content: '';
+      position: absolute;
+      top: -50%;
+      right: -50%;
+      width: 150px;
+      height: 150px;
+      background: radial-gradient(circle, rgba(6, 182, 212, 0.25) 0%, transparent 70%);
+      border-radius: 50%;
+    }
+    .card-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
       margin-bottom: 20px;
-      border: 1px solid #e2e8f0;
     }
-    .section-title {
-      font-size: 12px;
+    .card-bank-name {
+      font-weight: 800;
+      font-size: 17px;
+      letter-spacing: 0.5px;
+      color: #60a5fa;
+    }
+    .chip {
+      width: 32px;
+      height: 24px;
+      background: linear-gradient(135deg, #f59e0b, #d97706);
+      border-radius: 5px;
+      position: relative;
+    }
+    .card-number {
+      font-family: monospace;
+      font-size: 16px;
+      letter-spacing: 2px;
+      color: #e2e8f0;
+      margin-bottom: 12px;
+    }
+    .card-bottom {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+    }
+    .card-holder {
+      font-size: 13px;
       font-weight: 700;
-      color: #475569;
+      letter-spacing: 0.5px;
+      color: #cbd5e1;
       text-transform: uppercase;
-      letter-spacing: 0.6px;
-      margin-bottom: 14px;
+    }
+    .card-type {
+      font-size: 12px;
+      font-weight: 600;
+      color: #94a3b8;
+    }
+
+    /* Form Elements */
+    .field {
+      margin-bottom: 16px;
     }
     label {
       display: block;
-      font-size: 13px;
-      font-weight: 600;
-      color: #475569;
-      margin-bottom: 6px;
+      font-size: 12px;
+      font-weight: 700;
+      color: #94a3b8;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 8px;
     }
     input {
       width: 100%;
-      padding: 11px 14px;
-      border: 1.5px solid #cbd5e1;
-      border-radius: 10px;
-      font-size: 14px;
+      padding: 13px 16px;
+      background: rgba(15, 23, 42, 0.6);
+      border: 1.5px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      color: #ffffff;
+      font-size: 15px;
+      font-family: inherit;
       outline: none;
       transition: all 0.2s;
-      background: #ffffff;
-      font-family: inherit;
     }
     input:focus {
-      border-color: #3b82f6;
-      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+      border-color: var(--primary);
+      box-shadow: 0 0 0 4px var(--primary-glow);
+      background: rgba(15, 23, 42, 0.9);
     }
     .amount-input {
-      font-size: 20px;
-      font-weight: 700;
-      color: #0284c7;
+      font-size: 24px;
+      font-weight: 800;
+      color: #38bdf8;
+      letter-spacing: -0.5px;
     }
-    .row { display: flex; gap: 12px; margin-bottom: 12px; }
-    .row .field { flex: 1; }
-    .field { margin-bottom: 14px; }
-    .btn {
-      width: 100%;
-      padding: 13px;
-      border: none;
-      border-radius: 12px;
-      font-size: 15px;
+
+    /* Quick Chips */
+    .chips-group {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      margin-top: 8px;
+      margin-bottom: 16px;
+    }
+    .chip-btn {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: #cbd5e1;
+      padding: 7px 4px;
+      border-radius: 8px;
+      font-size: 12px;
       font-weight: 600;
       cursor: pointer;
       transition: all 0.2s;
+      text-align: center;
+    }
+    .chip-btn:hover, .chip-btn.active {
+      background: var(--primary);
+      border-color: var(--primary);
+      color: white;
+    }
+
+    .row {
+      display: flex;
+      gap: 12px;
+    }
+    .row .field { flex: 1; }
+
+    /* Buttons */
+    .btn {
+      width: 100%;
+      padding: 14px;
+      border: none;
+      border-radius: 14px;
+      font-size: 15px;
+      font-weight: 700;
       font-family: inherit;
+      cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
       gap: 8px;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     }
-    .btn-login {
-      background: #2563eb;
+    .btn-primary {
+      background: linear-gradient(135deg, #2563eb 0%, #0284c7 100%);
       color: white;
+      box-shadow: 0 10px 20px -5px var(--primary-glow);
     }
-    .btn-login:hover { background: #1d4ed8; }
-    .btn-qr {
-      background: linear-gradient(135deg, #0284c7, #2563eb);
-      color: white;
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 14px 24px -5px var(--primary-glow);
     }
-    .btn-qr:hover { opacity: 0.95; transform: translateY(-1px); }
     .btn-simulate {
-      background: #f1f5f9;
-      color: #0f172a;
-      border: 1px dashed #cbd5e1;
+      background: rgba(255, 255, 255, 0.06);
+      color: #f1f5f9;
+      border: 1px dashed rgba(255, 255, 255, 0.25);
+      margin-top: 12px;
       font-size: 13px;
-      padding: 10px;
-      margin-top: 10px;
+      padding: 11px;
     }
     .btn-simulate:hover {
-      background: #e2e8f0;
+      background: rgba(255, 255, 255, 0.12);
+      border-color: #38bdf8;
+      color: #38bdf8;
     }
+    .btn-outline {
+      background: transparent;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      color: #94a3b8;
+      font-size: 13px;
+      margin-top: 14px;
+      padding: 10px;
+    }
+    .btn-outline:hover {
+      background: rgba(255, 255, 255, 0.05);
+      color: #ffffff;
+    }
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none !important;
+    }
+
+    /* QR Scan Stage */
+    .qr-stage {
+      text-align: center;
+      margin-top: 8px;
+      animation: fadeIn 0.4s ease;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .qr-frame-wrapper {
+      position: relative;
+      display: inline-block;
+      margin: 12px auto 16px;
+      padding: 14px;
+      background: #ffffff;
+      border-radius: 20px;
+      box-shadow: 0 15px 35px -5px rgba(0, 0, 0, 0.5);
+    }
+
+    /* Scan animation bar */
+    .scan-bar {
+      position: absolute;
+      top: 14px;
+      left: 14px;
+      right: 14px;
+      height: 3px;
+      background: linear-gradient(90deg, transparent, #2563eb, transparent);
+      box-shadow: 0 0 10px #2563eb;
+      animation: scanAnim 2.2s ease-in-out infinite alternate;
+      pointer-events: none;
+      border-radius: 2px;
+    }
+    @keyframes scanAnim {
+      0% { top: 14px; opacity: 0.3; }
+      50% { opacity: 1; }
+      100% { top: calc(100% - 17px); opacity: 0.3; }
+    }
+
+    #qrcode canvas {
+      display: block;
+      border-radius: 8px;
+    }
+
+    /* Radar Status Badge */
+    .status-bar {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      background: rgba(245, 158, 11, 0.12);
+      border: 1px solid rgba(245, 158, 11, 0.3);
+      color: #fbbf24;
+      padding: 10px 16px;
+      border-radius: 12px;
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 16px;
+    }
+    .radar-spinner {
+      width: 14px;
+      height: 14px;
+      border: 2px solid #fbbf24;
+      border-top-color: transparent;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Detail Bill Box */
+    .bill-box {
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 14px;
+      padding: 14px 18px;
+      font-size: 13px;
+      margin-bottom: 12px;
+      text-align: left;
+    }
+    .bill-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 6px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+    .bill-row:last-child { border: none; }
+    .bill-label { color: var(--text-muted); }
+    .bill-value {
+      font-weight: 700;
+      color: #ffffff;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .copy-btn {
+      background: rgba(255, 255, 255, 0.1);
+      border: none;
+      color: #38bdf8;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 11px;
+      cursor: pointer;
+    }
+    .copy-btn:hover { background: rgba(255, 255, 255, 0.2); }
+
+    /* Success Card Overlay */
+    .success-overlay {
+      display: none;
+      background: linear-gradient(135deg, rgba(6, 78, 59, 0.95), rgba(4, 120, 87, 0.95));
+      border: 2px solid #10b981;
+      border-radius: 20px;
+      padding: 30px 20px;
+      text-align: center;
+      box-shadow: 0 20px 40px -10px var(--success-glow);
+      animation: popSuccess 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      margin-bottom: 16px;
+    }
+    @keyframes popSuccess {
+      from { transform: scale(0.9); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+    .success-icon-circle {
+      width: 68px;
+      height: 68px;
+      background: #10b981;
+      color: white;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 36px;
+      margin: 0 auto 16px;
+      box-shadow: 0 10px 25px rgba(16, 185, 129, 0.5);
+    }
+    .success-title {
+      font-size: 20px;
+      font-weight: 800;
+      color: #ffffff;
+      margin-bottom: 4px;
+    }
+    .success-amount {
+      font-size: 26px;
+      font-weight: 800;
+      color: #a7f3d0;
+      margin-bottom: 12px;
+      letter-spacing: -0.5px;
+    }
+    .success-meta {
+      font-size: 12px;
+      color: #d1fae5;
+      line-height: 1.6;
+      background: rgba(0, 0, 0, 0.2);
+      padding: 10px;
+      border-radius: 10px;
+    }
+
     .alert {
       padding: 12px 14px;
       border-radius: 10px;
@@ -142,219 +478,179 @@
       margin-bottom: 14px;
       line-height: 1.4;
     }
-    .alert-error { background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; }
-    .alert-success { background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; }
+    .alert-error {
+      background: rgba(220, 38, 38, 0.15);
+      border: 1px solid rgba(220, 38, 38, 0.4);
+      color: #fca5a5;
+    }
 
-    /* QR Result Area */
-    .qr-area { text-align: center; }
-    #qrcode {
-      display: inline-block;
-      padding: 12px;
-      background: white;
-      border-radius: 14px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.06);
-      border: 1px solid #e2e8f0;
-      margin-bottom: 16px;
-    }
-    #qrcode canvas { display: block; }
-    .qr-info {
-      background: #f8fafc;
-      border-radius: 12px;
-      padding: 14px 16px;
-      text-align: left;
-      font-size: 13px;
-      border: 1px solid #e2e8f0;
-      margin-bottom: 12px;
-    }
-    .qr-info div {
-      display: flex;
-      justify-content: space-between;
-      padding: 6px 0;
-      border-bottom: 1px solid #f1f5f9;
-    }
-    .qr-info div:last-child { border: none; }
-    .qr-info .label { color: #64748b; }
-    .qr-info .value { font-weight: 600; color: #0f172a; }
-
-    /* Payment Status Badge */
-    .status-badge {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      padding: 10px 14px;
-      border-radius: 10px;
-      font-size: 13px;
-      font-weight: 600;
-      margin-bottom: 16px;
-    }
-    .status-pending {
-      background: #fef3c7;
-      color: #92400e;
-      border: 1px solid #fde68a;
-    }
-    .status-paid {
-      background: #dcfce7;
-      color: #166534;
-      border: 1px solid #bbf7d0;
-      font-size: 15px;
-      padding: 14px;
-    }
-    .spinner {
-      width: 14px;
-      height: 14px;
-      border: 2px solid #b45309;
-      border-top-color: transparent;
-      border-radius: 50%;
-      animation: spin 0.8s linear infinite;
-    }
-    @keyframes spin { to { transform: rotate(360deg); } }
-
-    /* Success Card */
-    .paid-card {
-      background: #ecfdf5;
-      border: 2px solid #10b981;
-      border-radius: 16px;
-      padding: 24px 16px;
+    .footer-note {
       text-align: center;
-      margin-bottom: 16px;
-      animation: popIn 0.3s ease;
-    }
-    @keyframes popIn {
-      0% { transform: scale(0.95); opacity: 0; }
-      100% { transform: scale(1); opacity: 1; }
-    }
-    .check-icon {
-      width: 52px;
-      height: 52px;
-      background: #10b981;
-      color: white;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 28px;
-      margin: 0 auto 12px;
-      box-shadow: 0 10px 15px -3px rgba(16, 185, 129, 0.3);
-    }
-    .paid-card h3 {
-      font-size: 18px;
-      color: #065f46;
-      margin-bottom: 4px;
-    }
-    .paid-card p {
-      color: #047857;
-      font-size: 13px;
-    }
-
-    .qr-link {
-      display: inline-block;
-      margin-top: 10px;
-      color: #2563eb;
-      font-size: 13px;
-      text-decoration: none;
-      font-weight: 500;
-    }
-    .qr-link:hover { text-decoration: underline; }
-    .sandbox-hint {
       font-size: 11px;
       color: #64748b;
-      margin-top: 10px;
-      background: #f1f5f9;
-      padding: 8px 10px;
-      border-radius: 8px;
-      text-align: left;
-      line-height: 1.4;
+      margin-top: 14px;
     }
   </style>
 </head>
 <body>
 
-<div class="card">
-  <div class="header">
-    <div>
-      <h1>VietQR Demo <span class="tag">Auto-Sync</span></h1>
-      <p class="subtitle">Thanh toán & nhận callback thời gian thực</p>
-    </div>
-  </div>
+<div class="glow-orb"></div>
 
-  <!-- LOGIN SECTION -->
-  <div id="loginSection">
-    <div class="section">
-      <div class="section-title">Đăng nhập Admin</div>
+<div class="app-container">
+  <div class="card">
+    <!-- Header -->
+    <div class="header">
+      <div class="brand">
+        <div class="brand-logo">⚡</div>
+        <div>
+          <h1>VietQR Pro</h1>
+          <p style="font-size:12px;color:var(--text-muted)">Hệ thống thanh toán tự động</p>
+        </div>
+      </div>
+      <div class="live-badge">
+        <span class="live-dot"></span>
+        <span>AUTO-SYNC</span>
+      </div>
+    </div>
+
+    <!-- LOGIN FORM -->
+    <div id="loginSection">
       <div id="loginAlert"></div>
       <div class="field">
-        <label>Username</label>
+        <label>Tài khoản quản trị</label>
         <input id="username" type="text" placeholder="admin" value="admin" />
       </div>
       <div class="field">
-        <label>Password</label>
+        <label>Mật khẩu</label>
         <input id="password" type="password" placeholder="••••••••" value="Admin@123" />
       </div>
-      <button class="btn btn-login" onclick="login()">Đăng nhập</button>
+      <button class="btn btn-primary" onclick="login()">Đăng nhập hệ thống</button>
     </div>
-  </div>
 
-  <!-- QR ORDER SECTION -->
-  <div id="qrSection" style="display:none">
-    <div class="section">
-      <div class="section-title">Tạo đơn thanh toán</div>
-      <div id="qrAlert"></div>
-      <div class="field">
-        <label>Số tiền (VND)</label>
-        <input id="amount" class="amount-input" type="number" placeholder="50000" value="2000" />
-      </div>
-      <div class="row">
-        <div class="field">
-          <label>Mã đơn hàng</label>
-          <input id="orderId" type="text" placeholder="ORDER001" value="ORDER002" maxlength="13" />
+    <!-- MAIN PAYMENT WORKSPACE -->
+    <div id="qrSection" style="display:none">
+      
+      <!-- Visual Bank Card -->
+      <div class="bank-card">
+        <div class="card-top">
+          <div class="card-bank-name">MBBANK</div>
+          <div class="chip"></div>
         </div>
-        <div class="field">
-          <label>Nội dung</label>
-          <input id="content" type="text" placeholder="Thanh toan" value="Thanh toan don" maxlength="23" />
+        <div class="card-number">2501 2005 66666</div>
+        <div class="card-bottom">
+          <div class="card-holder">PHAM MINH HIEU</div>
+          <div class="card-type">NAPAS 247</div>
         </div>
       </div>
-      <button class="btn btn-qr" id="btnGenerate" onclick="generateQr()">
-        <span>🔲 Tạo mã VietQR</span>
+
+      <!-- CREATE ORDER FORM -->
+      <div id="orderForm">
+        <div id="qrAlert"></div>
+        <div class="field">
+          <label>Số tiền thanh toán (VND)</label>
+          <input id="amount" class="amount-input" type="number" value="2000" />
+          <div class="chips-group">
+            <div class="chip-btn active" onclick="setAmount(2000, this)">2.000đ</div>
+            <div class="chip-btn" onclick="setAmount(10000, this)">10.000đ</div>
+            <div class="chip-btn" onclick="setAmount(50000, this)">50.000đ</div>
+            <div class="chip-btn" onclick="setAmount(100000, this)">100.000đ</div>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="field">
+            <label>Mã đơn hàng</label>
+            <input id="orderId" type="text" value="ORDER003" maxlength="13" />
+          </div>
+          <div class="field">
+            <label>Nội dung CK</label>
+            <input id="content" type="text" value="Thanh toan" maxlength="23" />
+          </div>
+        </div>
+
+        <button class="btn btn-primary" id="btnGenerate" onclick="generateQr()">
+          <span>🔲 Tạo mã VietQR thanh toán</span>
+        </button>
+      </div>
+
+      <!-- QR CODE DISPLAY STAGE -->
+      <div id="qrResult" class="qr-stage" style="display:none">
+        
+        <!-- Live Status Bar -->
+        <div class="status-bar" id="statusBar">
+          <div class="radar-spinner"></div>
+          <span>Đang chờ chuyển tiền từ App Ngân hàng...</span>
+        </div>
+
+        <!-- Success Screen -->
+        <div class="success-overlay" id="successOverlay">
+          <div class="success-icon-circle">✓</div>
+          <div class="success-title">THANH TOÁN THÀNH CÔNG</div>
+          <div class="success-amount" id="successAmount">0 VND</div>
+          <div class="success-meta" id="successMeta">
+            Đang cập nhật biên lai...
+          </div>
+          <button class="btn btn-primary" style="margin-top:16px;background:#059669" onclick="resetNewOrder()">
+            + Tạo đơn mới
+          </button>
+        </div>
+
+        <!-- QR Display Box -->
+        <div id="qrBox">
+          <div class="qr-frame-wrapper">
+            <div class="scan-bar"></div>
+            <div id="qrcode"></div>
+          </div>
+
+          <!-- Bill details -->
+          <div class="bill-box" id="billBox">
+            <div class="bill-row">
+              <span class="bill-label">Ngân hàng</span>
+              <span class="bill-value">MBBank (Quân Đội)</span>
+            </div>
+            <div class="bill-row">
+              <span class="bill-label">Số tài khoản</span>
+              <span class="bill-value">
+                <span id="txtAccount">2501200566666</span>
+                <button class="copy-btn" onclick="copyText('2501200566666')">Copy</button>
+              </span>
+            </div>
+            <div class="bill-row">
+              <span class="bill-label">Người nhận</span>
+              <span class="bill-value" id="txtOwner">PHAM MINH HIEU</span>
+            </div>
+            <div class="bill-row">
+              <span class="bill-label">Số tiền</span>
+              <span class="bill-value" style="color:#38bdf8" id="txtAmount">2.000 VND</span>
+            </div>
+            <div class="bill-row">
+              <span class="bill-label">Nội dung CK</span>
+              <span class="bill-value">
+                <span id="txtContent" style="color:#60a5fa;word-break:break-all">...</span>
+                <button class="copy-btn" onclick="copyContent()">Copy</button>
+              </span>
+            </div>
+          </div>
+
+          <!-- Fast Simulate Pay Button -->
+          <button class="btn btn-simulate" id="btnSimulate" onclick="simulatePayment()">
+            ⚡ Giả lập thanh toán ngay (Test callback)
+          </button>
+        </div>
+
+        <button class="btn btn-outline" onclick="resetNewOrder()">
+          ← Quay lại đổi số tiền
+        </button>
+      </div>
+
+      <button class="btn btn-outline" style="border:none;margin-top:20px;font-size:12px" onclick="logout()">
+        Đăng xuất
       </button>
     </div>
 
-    <!-- QR DISPLAY & STATUS -->
-    <div id="qrResult" style="display:none">
-      <!-- Status Badge -->
-      <div id="statusContainer">
-        <div class="status-badge status-pending" id="statusBadge">
-          <div class="spinner"></div>
-          <span>Đang chờ khách quét mã và thanh toán...</span>
-        </div>
-      </div>
-
-      <!-- Success Card (Hidden initially) -->
-      <div id="paidSuccessCard" class="paid-card" style="display:none">
-        <div class="check-icon">✓</div>
-        <h3>THANH TOÁN THÀNH CÔNG!</h3>
-        <p id="paidSuccessMsg">Hệ thống đã nhận được tiền từ ngân hàng.</p>
-      </div>
-
-      <div class="qr-area" id="qrArea">
-        <div id="qrcode"></div>
-        <div class="qr-info" id="qrInfo"></div>
-        <a id="qrLink" class="qr-link" target="_blank">🔗 Mở trang thanh toán VietQR</a>
-
-        <!-- Fast Simulation Button -->
-        <button class="btn btn-simulate" id="btnSimulate" onclick="simulatePayment()">
-          ⚡ Giả lập thanh toán ngay (Mô phỏng callback)
-        </button>
-
-        <div class="sandbox-hint">
-          💡 <strong>Lưu ý:</strong> App đang chạy chế độ tự động polling (kiểm tra trạng thái mỗi 2 giây). Khi VietQR bắn webhook tiền về, màn hình sẽ tự động chuyển sang màu xanh ngay lập tức!
-        </div>
-      </div>
+    <div class="footer-note">
+      Tự động nhận diện MoMo / MB / SePay webhook trong 2 giây
     </div>
-
-    <button class="btn" style="background:#f8fafc;color:#475569;margin-top:16px;border:1px solid #e2e8f0" onclick="logout()">
-      Đăng xuất
-    </button>
   </div>
 </div>
 
@@ -362,8 +658,58 @@
 <script>
   let jwtToken = null;
   let currentOrderId = null;
+  let currentContent = '';
   let pollInterval = null;
   const BASE = window.location.origin;
+
+  // Web Audio Synth for Cash Chime Sound
+  function playSuccessSound() {
+    try {
+      const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const now = audioCtx.currentTime;
+
+      // Note 1: E5
+      const osc1 = audioCtx.createOscillator();
+      const gain1 = audioCtx.createGain();
+      osc1.type = 'sine';
+      osc1.frequency.setValueAtTime(659.25, now);
+      gain1.gain.setValueAtTime(0.3, now);
+      gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
+      osc1.connect(gain1);
+      gain1.connect(audioCtx.destination);
+      osc1.start(now);
+      osc1.stop(now + 0.5);
+
+      // Note 2: B5 (higher pitch ding)
+      const osc2 = audioCtx.createOscillator();
+      const gain2 = audioCtx.createGain();
+      osc2.type = 'triangle';
+      osc2.frequency.setValueAtTime(987.77, now + 0.12);
+      gain2.gain.setValueAtTime(0.4, now + 0.12);
+      gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.8);
+      osc2.connect(gain2);
+      gain2.connect(audioCtx.destination);
+      osc2.start(now + 0.12);
+      osc2.stop(now + 0.8);
+    } catch (e) {
+      console.log('AudioContext not allowed without gesture', e);
+    }
+  }
+
+  function setAmount(val, el) {
+    document.getElementById('amount').value = val;
+    document.querySelectorAll('.chip-btn').forEach(btn => btn.classList.remove('active'));
+    el.classList.add('active');
+  }
+
+  function copyText(text) {
+    navigator.clipboard.writeText(text);
+    alert('Đã sao chép: ' + text);
+  }
+
+  function copyContent() {
+    if (currentContent) copyText(currentContent);
+  }
 
   async function login() {
     const username = document.getElementById('username').value.trim();
@@ -387,7 +733,7 @@
         alertEl.innerHTML = `<div class="alert alert-error">${data.message || 'Đăng nhập thất bại'}</div>`;
       }
     } catch (e) {
-      alertEl.innerHTML = `<div class="alert alert-error">Không kết nối được server</div>`;
+      alertEl.innerHTML = `<div class="alert alert-error">Không kết nối được máy chủ</div>`;
     }
   }
 
@@ -403,9 +749,8 @@
     if (!orderId) { alertEl.innerHTML = '<div class="alert alert-error">Nhập mã đơn hàng</div>'; return; }
 
     btn.disabled = true;
-    btn.innerHTML = '<span>Đang tạo QR từ VietQR...</span>';
+    btn.innerHTML = '<span>⚡ Đang tạo mã VietQR...</span>';
 
-    // Dừng polling đơn cũ nếu có
     if (pollInterval) clearInterval(pollInterval);
 
     try {
@@ -430,6 +775,7 @@
       const data = await res.json();
       if (res.ok && data.qrCode) {
         currentOrderId = orderId;
+        currentContent = data.content;
         renderQr(data, amount);
         startPolling(orderId);
       } else {
@@ -439,7 +785,7 @@
       alertEl.innerHTML = `<div class="alert alert-error">Lỗi kết nối: ${e.message}</div>`;
     } finally {
       btn.disabled = false;
-      btn.innerHTML = '<span>🔲 Tạo mã VietQR</span>';
+      btn.innerHTML = '<span>🔲 Tạo mã VietQR thanh toán</span>';
     }
   }
 
@@ -450,33 +796,22 @@
       text: data.qrCode,
       width: 220,
       height: 220,
-      colorDark: '#0f172a',
+      colorDark: '#090d16',
       colorLight: '#ffffff'
     });
 
-    document.getElementById('qrInfo').innerHTML = `
-      <div><span class="label">Tài khoản</span><span class="value">MB - ${data.bankAccount}</span></div>
-      <div><span class="label">Chủ TK</span><span class="value">${data.userBankName}</span></div>
-      <div><span class="label">Số tiền</span><span class="value">${amount.toLocaleString('vi-VN')} VND</span></div>
-      <div><span class="label">Mã đơn hàng</span><span class="value">${data.orderId}</span></div>
-      <div><span class="label">Nội dung CK</span><span class="value" style="color:#2563eb">${data.content}</span></div>
-    `;
+    document.getElementById('txtAccount').innerText = data.bankAccount;
+    document.getElementById('txtOwner').innerText = data.userBankName;
+    document.getElementById('txtAmount').innerText = Number(amount).toLocaleString('vi-VN') + ' VND';
+    document.getElementById('txtContent').innerText = data.content;
 
-    const link = document.getElementById('qrLink');
-    link.href = data.qrLink;
-
-    // Reset giao diện trạng thái
-    document.getElementById('statusContainer').style.display = 'block';
-    document.getElementById('statusBadge').className = 'status-badge status-pending';
-    document.getElementById('statusBadge').innerHTML = '<div class="spinner"></div><span>Đang chờ khách quét mã và thanh toán...</span>';
-    document.getElementById('paidSuccessCard').style.display = 'none';
-    document.getElementById('qrcode').style.display = 'inline-block';
-    document.getElementById('btnSimulate').style.display = 'block';
-
+    document.getElementById('orderForm').style.display = 'none';
     document.getElementById('qrResult').style.display = 'block';
+    document.getElementById('qrBox').style.display = 'block';
+    document.getElementById('statusBar').style.display = 'flex';
+    document.getElementById('successOverlay').style.display = 'none';
   }
 
-  // Polling tự động mỗi 2s để kiểm tra trạng thái đơn
   function startPolling(orderId) {
     if (pollInterval) clearInterval(pollInterval);
 
@@ -493,44 +828,61 @@
           onPaymentSuccess(data);
         }
       } catch (err) {
-        console.warn('Lỗi polling đơn:', err);
+        console.warn('Polling error:', err);
       }
     }, 2000);
   }
 
   function onPaymentSuccess(data) {
-    document.getElementById('statusContainer').style.display = 'none';
-    document.getElementById('paidSuccessCard').style.display = 'block';
-    document.getElementById('paidSuccessMsg').innerHTML =
-      `Đã nhận thành công <strong>${Number(data.paidAmount).toLocaleString('vi-VN')} VND</strong><br>` +
-      `<small style="color:#059669">Mã tham chiếu: ${data.refTransactionId}</small>`;
+    playSuccessSound();
 
-    // Ẩn nút giả lập
-    document.getElementById('btnSimulate').style.display = 'none';
+    // Confetti Celebration
+    if (typeof confetti === 'function') {
+      confetti({
+        particleCount: 100,
+        spread: 70,
+        origin: { y: 0.6 }
+      });
+    }
 
-    // Rung nhẹ hoặc hiệu ứng âm thanh nếu cần
-    if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+    document.getElementById('statusBar').style.display = 'none';
+    document.getElementById('qrBox').style.display = 'none';
+    document.getElementById('successOverlay').style.display = 'block';
+
+    document.getElementById('successAmount').innerText =
+      Number(data.paidAmount).toLocaleString('vi-VN') + ' VND';
+
+    document.getElementById('successMeta').innerHTML =
+      `Mã đơn: <strong>${data.orderId}</strong><br>` +
+      `Mã tham chiếu: <span style="word-break:break-all">${data.refTransactionId}</span><br>` +
+      `Thời gian: ${new Date().toLocaleTimeString('vi-VN')} ${new Date().toLocaleDateString('vi-VN')}`;
   }
 
-  // Giả lập thanh toán nhanh
   async function simulatePayment() {
     if (!currentOrderId) return;
     const btn = document.getElementById('btnSimulate');
     btn.disabled = true;
-    btn.innerText = 'Đang xử lý mô phỏng...';
+    btn.innerText = '⚡ Đang gửi tín hiệu tiền về...';
 
     try {
-      const res = await fetch(`${BASE}/api/qr/order/${currentOrderId}/simulate-pay`, {
+      await fetch(`${BASE}/api/qr/order/${currentOrderId}/simulate-pay`, {
         method: 'POST'
       });
-      const data = await res.json();
-      console.log('Simulate result:', data);
     } catch (e) {
-      alert('Lỗi mô phỏng: ' + e.message);
+      alert('Lỗi: ' + e.message);
     } finally {
       btn.disabled = false;
-      btn.innerText = '⚡ Giả lập thanh toán ngay (Mô phỏng callback)';
+      btn.innerText = '⚡ Giả lập thanh toán ngay (Test callback)';
     }
+  }
+
+  function resetNewOrder() {
+    if (pollInterval) clearInterval(pollInterval);
+    currentOrderId = null;
+    document.getElementById('qrResult').style.display = 'none';
+    document.getElementById('orderForm').style.display = 'block';
+    // Tự sinh mã đơn mới ngẫu nhiên
+    document.getElementById('orderId').value = 'ORD' + Math.floor(1000 + Math.random() * 9000);
   }
 
   function logout() {
@@ -539,7 +891,6 @@
     if (pollInterval) clearInterval(pollInterval);
     document.getElementById('qrSection').style.display = 'none';
     document.getElementById('loginSection').style.display = 'block';
-    document.getElementById('qrResult').style.display = 'none';
     document.getElementById('password').value = '';
   }
 
