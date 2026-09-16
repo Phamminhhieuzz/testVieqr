@@ -2,7 +2,10 @@ package com.demo.vietqr.controller;
 
 import com.demo.vietqr.dto.GenerateQrRequest;
 import com.demo.vietqr.dto.GenerateQrResponse;
+import com.demo.vietqr.dto.TransactionSyncPayload;
+import com.demo.vietqr.entity.QrOrder;
 import com.demo.vietqr.repository.QrOrderRepository;
+import com.demo.vietqr.service.TransactionStore;
 import com.demo.vietqr.service.VietQrService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -20,6 +23,7 @@ public class QrController {
 
     private final VietQrService vietQrService;
     private final QrOrderRepository qrOrderRepository;
+    private final TransactionStore transactionStore;
 
     /**
      * Tạo mã QR thanh toán VietQR.
@@ -79,6 +83,48 @@ public class QrController {
                         "status", "NOT_FOUND",
                         "message", "Không tìm thấy đơn " + orderId
                 )));
+    }
+
+    /**
+     * Giả lập thanh toán cho đơn hàng (mô phỏng callback ngân hàng VietQR).
+     * POST /api/qr/order/{orderId}/simulate-pay
+     */
+    @PostMapping("/order/{orderId}/simulate-pay")
+    public ResponseEntity<?> simulatePay(@PathVariable String orderId) {
+        var opt = qrOrderRepository.findByOrderId(orderId);
+        if (opt.isEmpty()) {
+            return ResponseEntity.status(404).body(Map.of(
+                    "status", "FAILED",
+                    "message", "Không tìm thấy đơn " + orderId
+            ));
+        }
+        var order = opt.get();
+        if (order.getStatus() == QrOrder.Status.PAID) {
+            return ResponseEntity.ok(Map.of(
+                    "status", "ALREADY_PAID",
+                    "message", "Đơn đã thanh toán trước đó",
+                    "orderId", orderId
+            ));
+        }
+
+        TransactionSyncPayload payload = new TransactionSyncPayload();
+        payload.setTransactionid("SIM-" + System.currentTimeMillis());
+        payload.setBankaccount(order.getBankAccount() != null ? order.getBankAccount() : "2501200566666");
+        payload.setAmount(order.getAmount());
+        payload.setTransType("C");
+        payload.setContent(order.getContent() != null ? order.getContent() : (order.getVqrCode() + " Thanh toan don"));
+        payload.setReferencenumber("SIM-REF-" + System.currentTimeMillis());
+        payload.setTransactiontime(System.currentTimeMillis());
+        payload.setOrderId(order.getOrderId());
+
+        var saved = transactionStore.save(payload);
+        return ResponseEntity.ok(Map.of(
+                "status", "SUCCESS",
+                "message", "Đã giả lập callback thành công",
+                "refTransactionId", saved.getReftransactionid(),
+                "orderId", orderId,
+                "amount", order.getAmount()
+        ));
     }
 
     /**
