@@ -28,13 +28,13 @@ public class VietQrCallbackController {
     @Value("${vietqr-callback.password}")
     private String callbackPassword;
 
-    @PostMapping("/api/token_generate")
+    @PostMapping({"/api/token_generate", "/vqr/api/token_generate"})
     public ResponseEntity<?> generateTokenForVietQR(
             @RequestHeader(value = "Authorization", required = false) String authorization) {
 
         if (authorization == null || !authorization.startsWith("Basic ")) {
             log.warn("VietQR gọi token_generate thiếu Basic Auth header");
-            return ResponseEntity.status(401).body(Map.of(
+            return ResponseEntity.status(400).body(Map.of(
                     "status", "FAILED",
                     "message", "Thiếu hoặc sai định dạng Authorization header"
             ));
@@ -45,7 +45,7 @@ public class VietQrCallbackController {
         try {
             credentials = new String(Base64.getDecoder().decode(base64Credentials), StandardCharsets.UTF_8);
         } catch (IllegalArgumentException e) {
-            return ResponseEntity.status(401).body(Map.of(
+            return ResponseEntity.status(400).body(Map.of(
                     "status", "FAILED",
                     "message", "Base64 không hợp lệ"
             ));
@@ -53,7 +53,7 @@ public class VietQrCallbackController {
 
         String[] parts = credentials.split(":", 2);
         if (parts.length != 2) {
-            return ResponseEntity.status(401).body(Map.of(
+            return ResponseEntity.status(400).body(Map.of(
                     "status", "FAILED",
                     "message", "Định dạng username:password không hợp lệ"
             ));
@@ -80,7 +80,7 @@ public class VietQrCallbackController {
         ));
     }
 
-    @PostMapping("/bank/api/transaction-sync")
+    @PostMapping({"/bank/api/transaction-sync", "/vqr/bank/api/transaction-sync"})
     public ResponseEntity<?> receiveTransactionSync(
             @RequestHeader(value = "Authorization", required = false) String authorization,
             @RequestBody TransactionSyncPayload payload) {

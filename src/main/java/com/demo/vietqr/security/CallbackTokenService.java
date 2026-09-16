@@ -9,6 +9,8 @@ import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.Date;
 
 @Slf4j
@@ -21,8 +23,18 @@ public class CallbackTokenService {
     @Value("${vietqr-callback.expiration-seconds}")
     private long expirationSeconds;
 
+    /**
+     * HS512 (theo tài liệu VietQR) bắt buộc khoá >= 512 bit.
+     * Băm secret qua SHA-512 để luôn ra đúng 64 byte, bất kể secret cấu hình dài bao nhiêu.
+     */
     private SecretKey getKey() {
-        return Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
+        try {
+            byte[] keyBytes = MessageDigest.getInstance("SHA-512")
+                    .digest(secret.getBytes(StandardCharsets.UTF_8));
+            return Keys.hmacShaKeyFor(keyBytes);
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalStateException("JVM thiếu thuật toán SHA-512", e);
+        }
     }
 
     public long getExpirationSeconds() {
@@ -34,7 +46,7 @@ public class CallbackTokenService {
                 .subject(subject)
                 .issuedAt(new Date())
                 .expiration(new Date(System.currentTimeMillis() + expirationSeconds * 1000))
-                .signWith(getKey(), Jwts.SIG.HS256)
+                .signWith(getKey(), Jwts.SIG.HS512)
                 .compact();
     }
 
