@@ -4,16 +4,17 @@ import com.demo.vietqr.dto.TokenGenerateResponse;
 import com.demo.vietqr.dto.TransactionSyncPayload;
 import com.demo.vietqr.dto.TransactionSyncResponse;
 import com.demo.vietqr.security.CallbackTokenService;
+import com.demo.vietqr.service.TransactionStore;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.annotation.*;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.Map;
-import java.util.UUID;
 
 @Slf4j
 @RestController
@@ -21,6 +22,7 @@ import java.util.UUID;
 public class VietQrCallbackController {
 
     private final CallbackTokenService callbackTokenService;
+    private final TransactionStore transactionStore;
 
     @Value("${vietqr-callback.username}")
     private String callbackUsername;
@@ -99,22 +101,91 @@ public class VietQrCallbackController {
             );
         }
 
-        log.info("=== NHẬN TRANSACTION SYNC TỪ VIETQR ===");
-        log.info("bankaccount      : {}", payload.getBankaccount());
-        log.info("amount           : {}", payload.getAmount());
-        log.info("transType        : {}", payload.getTransType());
-        log.info("content          : {}", payload.getContent());
-        log.info("transactionid    : {}", payload.getTransactionid());
-        log.info("referencenumber  : {}", payload.getReferencenumber());
-        log.info("orderId          : {}", payload.getOrderId());
-        log.info("========================================");
-
-        if ("C".equalsIgnoreCase(payload.getTransType())) {
-            log.info("✅ Ghi có {} VND vào tài khoản {} — orderId={}",
-                    payload.getAmount(), payload.getBankaccount(), payload.getOrderId());
+        String invalidReason = validate(payload);
+        if (invalidReason != null) {
+            log.warn("Payload transaction-sync không hợp lệ: {} — transactionid={}",
+                    invalidReason, payload.getTransactionid());
+            return ResponseEntity.status(400).body(
+                    TransactionSyncResponse.failed("INVALID_PAYLOAD", invalidReason)
+            );
         }
 
-        String reftransactionid = UUID.randomUUID().toString();
-        return ResponseEntity.ok(TransactionSyncResponse.success(reftransactionid));
+        // VietQR gọi lại cùng transactionid khi chưa nhận được phản hồi:
+        // trả đúng reftransactionid đã cấp lần đầu, không ghi nhận thêm lần nữa.
+        var existing = transactionStore.findByTransactionId(payload.getTransactionid());
+        if (existing.isPresent()) {
+            log.info("Giao dịch trùng — transactionid={} đã xử lý trước đó, reftransactionid={}",
+                    payload.getTransactionid(), existing.get().getReftransactionid());
+            return ResponseEntity.ok(
+                    TransactionSyncResponse.success(existing.get().getReftransactionid())
+            );
+        }
+
+        var stored = transactionStore.save(payload);
+
+        log.info("=== NHẬN TRANSACTION SYNC TỪ VIETQR ===");
+        log.info("transactionid    : {}", stored.getTransactionid());
+        log.info("reftransactionid : {}", stored.getReftransactionid());
+        log.info("bankaccount      : {}", stored.getBankaccount());
+        log.info("amount           : {}", stored.getAmount());
+        log.info("transType        : {}", stored.getTransType());
+        log.info("content          : {}", stored.getContent());
+        log.info("mã VQR           : {}", stored.getVqrCode());
+        log.info("referencenumber  : {}", stored.getReferencenumber());
+        log.info("========================================");
+
+        if ("C".equalsIgnoreCase(stored.getTransType())) {
+            log.info("✅ Ghi có {} VND vào tài khoản {} — mã VQR={}",
+                    stored.getAmount(), stored.getBankaccount(), stored.getVqrCode());
+        }
+
+        return ResponseEntity.ok(TransactionSyncResponse.success(stored.getReftransactionid()));
+    }
+
+    /** Tra cứu các giao dịch đã nhận từ VietQR. Dùng chính Basic Auth của callback. */
+    @GetMapping("/api/transactions")
+    public ResponseEntity<?> listTransactions(
+            @RequestHeader(value = "Authorization", required = false) String authorization) {
+
+        if (authorization == null || !authorization.startsWith("Basic ")) {
+            return ResponseEntity.status(401).body(Map.of("message", "Unauthorized"));
+        }
+        String decoded = new String(
+                Base64.getDecoder().decode(authorization.substring("Basic ".length()).trim()),
+                StandardCharsets.UTF_8);
+        String[] parts = decoded.split(":", 2);
+        if (parts.length != 2 || !callbackUsername.equals(parts[0]) || !callbackPassword.equals(parts[1])) {
+            return ResponseEntity.status(401).body(Map.of("message", "Unauthorized"));
+        }
+
+        var all = transactionStore.findAll();
+        return ResponseEntity.ok(Map.of("total", all.size(), "transactions", all));
+    }
+
+    /** Trả về mô tả lỗi nếu payload không hợp lệ, null nếu hợp lệ. */
+    private String validate(TransactionSyncPayload p) {
+        if (isBlank(p.getTransactionid())) return "Thiếu transactionid";
+        if (isBlank(p.getBankaccount())) return "Thiếu bankaccount";
+        if (isBlank(p.getContent())) return "Thiếu content";
+        if (isBlank(p.getReferencenumber())) return "Thiếu referencenumber";
+        if (p.getTransactiontime() == null) return "Thiếu transactiontime";
+        if (p.getAmount() == null || p.getAmount() <= 0) return "amount phải lớn hơn 0";
+        if (!"C".equalsIgnoreCase(p.getTransType()) && !"D".equalsIgnoreCase(p.getTransType())) {
+            return "transType phải là 'C' hoặc 'D'";
+        }
+        return null;
+    }
+
+    private boolean isBlank(String value) {
+        return value == null || value.isBlank();
+    }
+
+    /** Trả lỗi đúng định dạng VietQR khi body gửi sang không parse được. */
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<?> handleUnreadableBody(HttpMessageNotReadableException e) {
+        log.warn("Body transaction-sync không đọc được: {}", e.getMessage());
+        return ResponseEntity.status(400).body(
+                TransactionSyncResponse.failed("MALFORMED_BODY", "Body không hợp lệ hoặc thiếu")
+        );
     }
 }
